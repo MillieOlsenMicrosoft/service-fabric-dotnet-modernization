@@ -296,6 +296,7 @@
         "vmssApiVersion": "2017-03-30",
         "lbApiVersion": "2017-08-01",
         "storageApiVersion": "2017-10-01",
+        "nsgApiVersion": "2021-03-01",
         "SF-ManagementEndpoint": "[concat('https://', parameters('PrimaryNT-ILBAddress'),':', parameters('SF-HttpGatewayPort'))]",
         "PrimaryNT-ILB-Name": "[concat('ILB','-', parameters('SF-ClusterName'),'-',parameters('PrimaryNT-TypeName'))]",
         "PrimaryNT-ILB-ID": "[resourceId('Microsoft.Network/loadBalancers',variables('PrimaryNT-ILB-Name'))]",
@@ -337,6 +338,116 @@
             "tags": "[variables('Tags')]"
         },
         {
+            "apiVersion": "2018-08-01",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[concat('nsg', variables('subnet0Name'))]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+              "securityRules": [
+                {
+                  "name": "AzurePortal",
+                  "properties": {
+                    "access": "Allow",
+                    "sourceAddressPrefix": "ServiceFabric",
+                    "sourcePortRange": "*",
+                    "sourcePortRanges": [],
+                    "destinationAddressPrefix": "*",
+                    "destinationPortRange": "19080",
+                    "destinationPortRanges": [],
+                    "direction": "Inbound",
+                    "priority": 3900,
+                    "protocol": "Tcp",
+                    "description": ""
+                  }
+                },
+                {
+                    "name": "Cluster",
+                    "properties": {
+                      "access": "Allow",
+                      "sourceAddressPrefix": "VirtualNetwork",
+                      "sourcePortRange": "*",
+                      "sourcePortRanges": [],
+                      "destinationAddressPrefix": "*",
+                      "destinationPortRange": "",
+                      "destinationPortRanges": [ "1025", "1026", "1027" ],
+                      "direction": "Inbound",
+                      "priority": 3930,
+                      "protocol": "Tcp",
+                      "description": ""
+                    }
+                },
+                {
+                    "name": "Ephemeral",
+                    "properties": {
+                      "access": "Allow",
+                      "sourceAddressPrefix": "VirtualNetwork",
+                      "sourcePortRange": "*",
+                      "sourcePortRanges": [],
+                      "destinationAddressPrefix": "*",
+                      "destinationPortRange": "",
+                      "destinationPortRanges": [ "49152", "65334" ],
+                      "direction": "Inbound",
+                      "priority": 3940,
+                      "protocol": "Tcp",
+                      "description": ""
+                    }
+                },
+                {
+                    "name": "Application",
+                    "properties": {
+                      "access": "Allow",
+                      "sourceAddressPrefix": "VirtualNetwork",
+                      "sourcePortRange": "*",
+                      "sourcePortRanges": [],
+                      "destinationAddressPrefix": "*",
+                      "destinationPortRange": "",
+                      "destinationPortRanges": [ "20000", "30000" ],
+                      "direction": "Inbound",
+                      "priority": 3950,
+                      "protocol": "Tcp",
+                      "description": ""
+                    }
+                },
+                {
+                  "name": "ResourceProvider",
+                  "properties": {
+                    "access": "Allow",
+                    "sourceAddressPrefix": "*",
+                    "sourcePortRange": "*",
+                    "sourcePortRanges": [],
+                    "destinationAddressPrefix": "ServiceFabric",
+                    "destinationPortRange": "443",
+                    "destinationPortRanges": [],
+                    "direction": "Outbound",
+                    "priority": 4010,
+                    "protocol": "Tcp",
+                    "description": ""
+                  }
+                },
+                {
+                  "name": "DownloadBinaries",
+                  "properties": {
+                    "access": "Allow",
+                    "sourceAddressPrefix": "*",
+                    "sourcePortRange": "*",
+                    "sourcePortRanges": [],
+                    "destinationAddressPrefix": "AzureFrontDoor.FirstParty",
+                    "destinationPortRange": "",
+                    "destinationPortRanges": [ "443" ],
+                    "direction": "Outbound",
+                    "priority": 4020,
+                    "protocol": "Tcp",
+                    "description": ""
+                  }
+                }
+              ]
+            },
+            "tags": {
+              "resourceType": "Service Fabric",
+              "clusterName": "[parameters('clusterName')]"
+            }
+        },
+        {
             "apiVersion": "[variables('storageApiVersion')]",
             "type": "Microsoft.Storage/storageAccounts",
             "name": "[parameters('AppLog-AccountName')]",
@@ -364,6 +475,9 @@
             "type": "Microsoft.Network/loadBalancers",
             "name": "[variables('PrimaryNT-ILB-Name')]",
             "location": "[parameters('VMSS-Location')]",
+            "sku": {
+                "name": "Standard"
+            },
             "properties": {
                 "frontendIPConfigurations": [
                     {
@@ -451,6 +565,9 @@
             "type": "Microsoft.Network/loadBalancers",
             "name": "[variables('WebNT-LB-Name')]",
             "location": "[parameters('VMSS-Location')]",
+            "sku": {
+                "name": "Standard"
+            },
             "properties": {
                 "frontendIPConfigurations": [
                     {
